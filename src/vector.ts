@@ -337,6 +337,25 @@ class Vector {
         return new Vector(data);
     }
 
+    public findPeriod() : number {
+        const map: {[key: number]: Set<Date>} = {};
+        let period = 0;
+        for (const d of this.data) {
+            const year = d.refper.getFullYear();
+            //If year already exist in map
+            if(year in map){
+                //Add to set of refperiods from year
+                map[Number(year)].add(d.refper);
+            } else {
+                //Init set of refperiods from year
+                map[Number(year)] = new Set<Date>().add(d.refper);
+            }
+            //Update period to the maximum of current period value and largest period of any year
+            period = Math.max(map[Number(year)].size, period);
+        }
+        return period;
+    }
+
     /**
      * Performs a same period previous year delta transformation on this vector.
      * @param op Delta operation.
@@ -421,6 +440,19 @@ class Vector {
             return cur - last;
         });
     }
+
+        /**
+     * Get the same period previous year difference ratio vector of this vector.
+     * @return Transformed vector.
+     */
+         public samePeriodPreviousYearRatio(): Vector {
+            let rValues = this.samePeriodPreviousYearTransformation(annualizedCompoundRate);
+            let period = rValues.findPeriod();
+            return rValues.periodTransformation((v) => {
+                //( ( ( (1 + R) ^ Period) - 1 ) * 100 )
+                return (Math.pow((1 + v), period) -1) * 100;
+            });
+        }
 
     /**
      * Convert vector to a lower frequency.
@@ -696,6 +728,10 @@ class Vector {
 
 function percentageChange(curr: number, last: number): number | null {
     return last == 0 ? null : ((curr - last) / Math.abs(last)) * 100;
+}
+
+function annualizedCompoundRate(curr: number, last: number): number | null {
+    return last == 0 ? null : ((curr - last) / (last));
 }
 
 function datestring(date: Date): string {
